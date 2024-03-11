@@ -1,0 +1,146 @@
+membuat project dicoding menggunakan framework Hapi :
+
+* MEMBANGUN WEB SERVER MENGGUNAKAN HAPI :
+1. buat folder dengan nama hapi-web-server 
+2. buka terminal ketik npm init --y
+3. buk file package.json ubah code dalam script menjadi : "scripts": {
+   "start": "node server.js"
+},
+4. lalu buat file server.js tulis code berikut : console.log('Halo, kita akan belajar membuat server menggunakan Hapi');
+5. jalankan perintah : npm run start di terminal, bila Anda melihat pesan “Halo, kita akan belajar membuat server menggunakan Hapi”, maka proyek telah siap digunakan. 
+
+* MEMBUAT HTTP SERVER :
+1. gunakan modul hapi dengan mengetik perintah ini di terminal : npm install @hapi/hapi
+2. ubah code di file server.js menjadi :
+const Hapi = require('@hapi/hapi');
+ 
+const init = async () => {
+    const server = Hapi.server({
+        port: 5000,
+        host: 'localhost',
+    });
+ 
+    await server.start();
+    console.log(`Server berjalan pada ${server.info.uri}`);
+};
+ 
+init();
+3. Simpan perubahan pada berkas server.js. Kemudian jalankan perintah npm run start pada Terminal. Jika server berhasil dijalankan, maka Anda akan melihat pesan ‘Server berjalan pada http://localhost:5000
+4. silakan buka folder di gitbash dan lakukan permintaan : curl -X GET http://localhost:5000 (Yups! Hapi secara default akan mengembalikan response “Not Found” ketika tidak ada request handler yang menangani permintaannya. Hal ini tentu lebih baik daripada permintaannya dibiarkan begitu saja, bukan? )
+
+* METHOD/VERB REQUEST DAN ROUTING
+1. buat file routes.js lalu isi code menjadi seperti ini :
+const routes = [
+    {
+        method: 'GET',
+        path: '/',
+        handler: (request, h) => {
+            return 'Homepage';
+        },
+    },
+    {
+        method: '*',
+        path: '/',
+        handler: (request, h) => {
+            return 'Halaman tidak dapat diakses dengan method tersebut';
+        },
+    },
+    {
+        method: 'GET',
+        path: '/about',
+        handler: (request, h) => {
+            return 'About page';
+        },
+    },
+    {
+        method: '*',
+        path: '/about',
+        handler: (request, h) => {
+            return 'Halaman tidak dapat diakses dengan method';
+        },
+    },
+    {
+        method: '*',
+        path: '/{any*}',
+        handler: (request, h) => {
+            return 'Halaman tidak ditemukan';
+        },
+    },
+];
+ 
+module.exports = routes;
+2. buka file server.js lalu tambah code ini di line ke 2 dan 11 : 
+line 2 : const routes = require('./routes');
+line 11 : server.route(routes);
+3. jalankan ulang server ketik perintah : npm run start dan coba lakukan permintaan ke server :
+- curl -X GET http://localhost:5000
+// output: Homepage
+- curl -X GET http://localhost:5000/about
+// output: About page
+- curl -X GET http://localhost:5000/test
+// output: Halaman tidak ditemukan
+- curl -X POST http://localhost:5000
+// output: Halaman tidak dapat diakses dengan method tersebut
+
+* PATH PARAMETER 
+1. buka berkas routes.js dan tambahkan route baru seperti ini (di line 30 bawah route '/about') :
+{
+    method: 'GET',
+    path: '/hello/{name?}',
+    handler: (request, h) => {
+       const { name = "stranger" } = request.params;
+       return `Hello, ${name}!`;
+   },
+},
+2. lakukanlah permintaan melalui curl atau browser pada path /hello/dicoding dan /hello. :
+- curl -X GET http://localhost:5000/hello/dicoding
+// output: Hello, dicoding!
+- curl -X GET http://localhost:5000/hello
+// output: Hello, stranger!
+
+* QUERY PARAMETERS
+1. buka file routes tambah code : const { lang } = request.query;
+(di line 35, dibawah code : const { name = "stranger" } = request.params;
+2. lalu tambah juga code (di line 37, ditedalam code const { lang } = request.query; dan  return `Hello, ${name}!`; :
+if(lang === 'id') {
+            return `Hai, ${name}!`;
+        }
+3. jalankan kembali server npm run start dan lakukan permintaan pada path /hello/dicoding dengan dan tanpa melampirkan kueri lang=id
+- curl -X GET http://localhost:5000/hello/dicoding?lang=id
+// output: Hai, dicoding!
+- curl -X GET http://localhost:5000/hello/dicoding
+// output: Hello, dicoding!
+
+* BODY/PAYLOAD REQUEST 
+hanya materi tidak ada praktek :
+Ketika menggunakan Node.js, untuk mendapatkan data pada body request--meskipun datanya hanya sebatas teks--kita harus berurusan dengan Readable Stream. Di mana untuk mendapatkan data melalui stream tak semudah seperti kita menginisialisasikan sebuah nilai pada variabel. 
+
+Good News! Ketika menggunakan Hapi, Anda tidak lagi berurusan dengan stream untuk mendapatkan datanya. Di balik layar, Hapi secara default akan mengubah payload JSON menjadi objek JavaScript. Dengan begitu, Anda tak lagi berurusan dengan JSON.parse()!
+
+Kapan pun client mengirimkan payload berupa JSON, payload tersebut dapat diakses pada route handler melalui properti request.payload. Contohnya seperti ini:
+server.route({
+    method: 'POST',
+    path: '/login',
+    handler: (request, h) => {
+        const { username, password } = request.payload;
+        return `Welcome ${username}!`;
+    },
+});
+Pada contoh di atas, handler menerima payload melalui request.payload. Dalam kasus tersebut, client mengirimkan data login dengan struktur:
+{ "username": "harrypotter", "password": "encryptedpassword" }
+
+* RESPONSE TOOLKIT 
+hanya materi tidak ada praktek :
+Fungsi handler pada Hapi memiliki dua parameters, yakni request dan h.
+
+Sebagaimana yang sudah banyak kita bahas sebelumnya, request parameter merupakan objek yang menampung detail dari permintaan client, seperti path dan query parameters, payload, headers, dan sebagainya. Ada baiknya Anda eksplorasi secara lebih dalam apa fungsi dari parameter request pada referensi API Hapi.
+
+Parameter yang kedua yaitu h (huruf inisial Hapi). Parameter ini merupakan response toolkit di mana ia adalah objek yang menampung banyak sekali method yang digunakan untuk menanggapi sebuah permintaan client. Objek ini serupa dengan objek response pada request handler ketika kita menggunakan Node.js native.
+pelajari lebih lanjut tentang ini di dokumentasinya : https://hapi.dev/api/?v=20.1.0#response-toolkit
+
+* BUILD RESTFUL API WITH HAPI 
+hanya materi tidak ada praktek :
+Pada akhirnya, Anda diharapkan bisa membuat server dari aplikasi catatan sederhana seperti pada video ini : https://youtu.be/3mDSdCDHAUU?embeds_referring_euri=https%3A%2F%2Fwww.dicoding.com%2F&source_ve_path=Mjg2NjQsMTY0NTAz&feature=emb_share
+
+
+
